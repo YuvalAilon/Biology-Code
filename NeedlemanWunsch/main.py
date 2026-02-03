@@ -1,9 +1,4 @@
-# This is a sample Python script.
-
-# Press ⌃R to execute it or replace it with your code.
-# Press Double ⇧ to search everywhere for classes, files, tool windows, actions, and settings.
-
-new_indel = -5
+new_indel = -5 # Not yet used
 extend_indel = -1
 indel_char = "-"
 
@@ -85,9 +80,6 @@ def needleman_wunsch(sequence1, sequence2):
     reconstruct(sequence1, sequence2, direction_array)
     print("Score: " + str(score_array[M][N]))
 
-def prepend(string, pre):
-    return pre + string
-
 def reconstruct(sequence1, sequence2, direction_array):
     sequence1_gaps = ""
     sequence2_gaps = ""
@@ -115,6 +107,9 @@ def reconstruct(sequence1, sequence2, direction_array):
             print(sequence1_gaps)
             print(sequence2_gaps)
             print("M:" + str(currentM) + " | N:" + str(currentN))
+
+def prepend(string, pre):
+    return pre + string
 
 needleman_wunsch(
     "CGATGCTAGCTAGCTAGCTA",
