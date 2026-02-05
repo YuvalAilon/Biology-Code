@@ -1,4 +1,4 @@
-import sys
+from enum import Enum
 
 new_indel = -5  # Not yet used
 extend_indel = -1
@@ -23,6 +23,12 @@ similarity_matrix = {
 diagonal = "↖"
 horizontal = "←"
 vertical = "↑"
+
+
+class reconstruct_state(Enum):
+    VERTICAL = 1
+    HORIZONTAL = 2
+    MATCH = 3
 
 
 # Assumes both sequences are the same length and sequence1 has no gaps
@@ -62,28 +68,31 @@ def needleman_wunsch(sequence1, sequence2):
 
     for N in range(1, len_seq1 + 1):
         for M in range(1, len_seq2 + 1):
-            """
-            max_score = max(
-                match_array[M - 1][N - 1] + + similarity_matrix.get(frozenset({sequence1[N - 1], sequence2[M - 1]})),
-                match_array[M][N - 1] + extend_indel,
-                match_array[M - 1][N] + extend_indel
-            )
-            match_array[M][N] = max_score
-            if max_score == match_array[M - 1][N - 1] + + similarity_matrix.get(
-                    frozenset({sequence1[N - 1], sequence2[M - 1]})):
-                direction_array[M][N] = direction_array[M][N] + diagonal
-            if max_score == match_array[M][N - 1] + extend_indel:
-                direction_array[M][N] = direction_array[M][N] + horizontal
-            if max_score == match_array[M - 1][N] + extend_indel:
-                direction_array[M][N] = direction_array[M][N] + vertical
-            """
-            horizontal_indel_array[M][N] = max_horizontal(horizontal_indel_array, match_array, M, N)
-            vertical_indel_array[M][N] = max_vertical(vertical_indel_array, match_array, M, N)
-            match_array[M][N] = max_match(
-                match_array, vertical_indel_array, horizontal_indel_array, M, N, sequence1,sequence2
-            )
+            horizontal_max = max_horizontal(horizontal_indel_array, match_array, M, N)
+            horizontal_indel_array[M][N] = horizontal_max
 
-            direction_array[M][N] = diagonal # TEMPORARY
+            vertical_max = max_vertical(vertical_indel_array, match_array, M, N)
+            vertical_indel_array[M][N] = vertical_max
+
+            match_max = max_match(
+                match_array, vertical_indel_array, horizontal_indel_array, M, N, sequence1, sequence2
+            )
+            match_array[M][N] = match_max
+
+            max_score = max(horizontal_max, vertical_max, match_array[M - 1][N - 1] + similarity_matrix.get(frozenset(
+                {sequence1[N - 1], sequence2[M - 1]}
+            )))
+
+            if max_score == horizontal_max:
+                direction_array[M][N] += horizontal
+            if max_score == vertical_max:
+                direction_array[M][N] += vertical
+            if max_score == match_array[M - 1][N - 1] + similarity_matrix.get(
+                    frozenset({sequence1[N - 1], sequence2[M - 1]})):
+                direction_array[M][N] += diagonal
+
+            direction_array[M][N] += " " * (3 - len(direction_array[M][N]))
+
     print("    " + sequence1)
     for i in range(0, len(match_array)):
         if (i == 0):
@@ -110,7 +119,7 @@ def needleman_wunsch(sequence1, sequence2):
         else:
             print(sequence2[i - 1] + " " + str(direction_array[i]))
 
-    reconstruct(sequence1, sequence2, direction_array)
+    reconstruct(sequence1, sequence2, direction_array, vertical_indel_array, horizontal_indel_array, match_array)
     print("Score: " + str(match_array[M][N]))
 
 
@@ -136,7 +145,7 @@ def max_horizontal(horizontal_array, match_array, M, N):
     )
 
 
-def reconstruct(sequence1, sequence2, direction_array):
+def reconstruct(sequence1, sequence2, direction_array, vertical_array, horizontal_array, match_array):
     sequence1_gaps = ""
     sequence2_gaps = ""
 
@@ -146,24 +155,55 @@ def reconstruct(sequence1, sequence2, direction_array):
     currentN = len_seq1
     currentM = len_seq2
 
+    state = reconstruct_state.MATCH
+
     while (currentM > 0 or currentN > 0):
-        if diagonal in direction_array[currentM][currentN]:
-            sequence1_gaps = prepend(sequence1_gaps, sequence1[currentN - 1])
-            sequence2_gaps = prepend(sequence2_gaps, sequence2[currentM - 1])
-            currentN -= 1
-            currentM -= 1
-        elif horizontal in direction_array[currentM][currentN] or currentM == 0:
-            sequence1_gaps = prepend(sequence1_gaps, sequence1[currentN - 1])
-            sequence2_gaps = prepend(sequence2_gaps, indel_char)
-            currentN -= 1
-        elif vertical in direction_array[currentM][currentN] or currentN == 0:
-            sequence1_gaps = prepend(sequence1_gaps, indel_char)
-            sequence2_gaps = prepend(sequence2_gaps, sequence2[currentM - 1])
-            currentM -= 1
-        print(sequence1_gaps)
-        print(sequence2_gaps)
+        directions = direction_array[currentM][currentN]
+        match state:
+            case reconstruct_state.MATCH:
+                if diagonal in directions:
+                    sequence1_gaps = prepend(sequence1_gaps, sequence1[currentN - 1])
+                    sequence2_gaps = prepend(sequence2_gaps, sequence2[currentM - 1])
+                    currentN -= 1
+                    currentM -= 1
+                elif horizontal in directions:
+                    state = reconstruct_state.HORIZONTAL
+                elif vertical in directions:
+                    state = reconstruct_state.VERTICAL
+            case reconstruct_state.HORIZONTAL:
+                sequence1_gaps = prepend(sequence1_gaps, sequence1[currentN - 1])
+                sequence2_gaps = prepend(sequence2_gaps, indel_char)
+
+                if horizontal_array[currentM][currentN] == (
+                        match_array[currentM][currentN - 1] + new_indel + extend_indel):
+                    state = reconstruct_state.MATCH
+
+                currentN -= 1
+
+            case reconstruct_state.VERTICAL:
+                sequence1_gaps = prepend(sequence1_gaps, indel_char)
+                sequence2_gaps = prepend(sequence2_gaps, sequence2[currentM - 1])
+
+                if vertical_array[currentM][currentN] == (
+                        match_array[currentM - 1][currentN] + new_indel + extend_indel):
+                    state = reconstruct_state.MATCH
+
+                currentM -= 1
+        print_match(sequence1_gaps, sequence2_gaps)
         print("M:" + str(currentM) + " | N:" + str(currentN))
-        print("*" * 15)
+        print("*" * (max(len_seq1,len_seq2) + 4))
+
+
+def print_match(sequence1, sequence2):
+    match_string = ""
+    for i in range(0, len(sequence1)):
+        if sequence1[i] == sequence2[i] and sequence1[i] != indel_char:
+            match_string += "|"
+        else:
+            match_string += " "
+    print(sequence1)
+    print(match_string)
+    print(sequence2)
 
 
 def prepend(string, pre):
@@ -171,6 +211,6 @@ def prepend(string, pre):
 
 
 needleman_wunsch(
-    "CAG",
-    "TAA"
+    "CTGATCGACTGACTAGCTAGCTCCCCGCGCGCGTAGCTAGCATGCTAGTCGATCGCATC",
+    "CTGATCGACGCGCGTAGCTAGCACGATCGCATC"
 )
