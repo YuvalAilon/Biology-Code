@@ -1,6 +1,6 @@
 from enum import Enum
 
-new_indel = -5  # Not yet used
+new_indel = -5
 extend_indel = -1
 indel_char = "-"
 
@@ -23,6 +23,8 @@ similarity_matrix = {
 diagonal = "↖"
 horizontal = "←"
 vertical = "↑"
+
+space_used = "■"
 
 
 class reconstruct_state(Enum):
@@ -59,12 +61,14 @@ def needleman_wunsch(sequence1, sequence2):
         if i != 1:
             match_array[0][i] = match_array[0][i - 1] + extend_indel
         vertical_indel_array[0][i] = float('-inf')
+        direction_array[0][i] = horizontal
     for i in range(1, len_seq2 + 1):
         if i != 1:
             match_array[i][0] = match_array[i - 1][0] + extend_indel
         horizontal_indel_array[i][0] = float('-inf')
-    print(vertical_indel_array)
-    print(horizontal_indel_array)
+        direction_array[i][0] = vertical
+
+    direction_array[0][0] = diagonal
 
     for N in range(1, len_seq1 + 1):
         for M in range(1, len_seq2 + 1):
@@ -91,36 +95,12 @@ def needleman_wunsch(sequence1, sequence2):
                     frozenset({sequence1[N - 1], sequence2[M - 1]})):
                 direction_array[M][N] += diagonal
 
-            direction_array[M][N] += " " * (3 - len(direction_array[M][N]))
-
-    print("    " + sequence1)
-    for i in range(0, len(match_array)):
-        if (i == 0):
-            print("  " + str(match_array[i]))
-        else:
-            print(sequence2[i - 1] + " " + str(match_array[i]))
-
-    for i in range(0, len(match_array)):
-        if (i == 0):
-            print("  " + str(horizontal_indel_array[i]))
-        else:
-            print(sequence2[i - 1] + " " + str(horizontal_indel_array[i]))
-
-    for i in range(0, len(match_array)):
-        if (i == 0):
-            print("  " + str(vertical_indel_array[i]))
-        else:
-            print(sequence2[i - 1] + " " + str(vertical_indel_array[i]))
-
-    print("    " + sequence1)
-    for i in range(0, len(direction_array)):
-        if (i == 0):
-            print("  " + str(direction_array[i]))
-        else:
-            print(sequence2[i - 1] + " " + str(direction_array[i]))
-
     reconstruct(sequence1, sequence2, direction_array, vertical_indel_array, horizontal_indel_array, match_array)
-    print("Score: " + str(match_array[M][N]))
+
+    print("Score: " + str(match_array[M][N]) + "\n")
+
+    print(pretty_print_array(direction_array, format_square, sequence1, sequence2))
+
 
 
 def max_vertical(vertical_array, match_array, M, N):
@@ -158,6 +138,7 @@ def reconstruct(sequence1, sequence2, direction_array, vertical_array, horizonta
     state = reconstruct_state.MATCH
 
     while (currentM > 0 or currentN > 0):
+        direction_array[currentM][currentN] += space_used
         directions = direction_array[currentM][currentN]
         match state:
             case reconstruct_state.MATCH:
@@ -189,9 +170,9 @@ def reconstruct(sequence1, sequence2, direction_array, vertical_array, horizonta
                     state = reconstruct_state.MATCH
 
                 currentM -= 1
-        print_match(sequence1_gaps, sequence2_gaps)
-        print("M:" + str(currentM) + " | N:" + str(currentN))
-        print("*" * (max(len_seq1,len_seq2) + 4))
+    print("*" * (max(len_seq1, len_seq2) + 4))
+    print_match(sequence1_gaps, sequence2_gaps)
+    print("*" * (max(len_seq1, len_seq2) + 4))
 
 
 def print_match(sequence1, sequence2):
@@ -199,6 +180,8 @@ def print_match(sequence1, sequence2):
     for i in range(0, len(sequence1)):
         if sequence1[i] == sequence2[i] and sequence1[i] != indel_char:
             match_string += "|"
+        elif sequence1[i] != sequence2[i] and sequence1[i] != indel_char and sequence2[i] != indel_char:
+            match_string += "*"
         else:
             match_string += " "
     print(sequence1)
@@ -210,7 +193,53 @@ def prepend(string, pre):
     return pre + string
 
 
+def pretty_print_array(array, formatter, sequence1, sequence2):
+    matrix = ""
+    for i in range(len(array)):
+        is_top = i == 0
+        is_bottom = i == len(array) - 1
+        matrix += print_matrix_row(list(map(formatter, array[i])), is_top, is_bottom, sequence1, sequence2[i-1]) + "\n"
+    return matrix
+
+
+def format_square(square):
+    grid_square = ["", ""]
+    grid_square[0] = diagonal if diagonal in square else " "
+    grid_square[0] += vertical if vertical in square else " "
+
+    grid_square[1] = horizontal if horizontal in square else " "
+    grid_square[1] += space_used if space_used in square else " "
+
+    return grid_square
+
+
+def print_matrix_row(row, is_top, is_bottom, sequence1, sequence2_letter):
+    side_letter_gap = "  "
+    print_string = ""
+    if is_top:
+        print_string += side_letter_gap + (" " * (len(row[0][0]) + 1))
+        for char in sequence1:
+            print_string += (" " * (len(row[0][0]) + 1)) + char
+        print_string += "\n"
+    if not is_top:
+        print_string += sequence2_letter + " "
+    print_string += "│" if not is_top else side_letter_gap + divider_line("┬", len(row), len(row[0][0]) + 1) + "\n" + side_letter_gap + "│"
+    for i in range(len(row[0])):
+        for square in row:
+            print_string += square[i] + " │"
+        print_string += "\n"
+        if i != len(row[0]) - 1:
+            print_string += side_letter_gap + "│"
+    bottom_char = "┴" if is_bottom else "┼"
+    print_string += side_letter_gap + divider_line(bottom_char, len(row), len(row[0][0]) + 1)
+    return print_string
+
+
+def divider_line(divider_char, length, cell_width):
+    return (divider_char + "─" * (cell_width)) * length + divider_char
+
+
 needleman_wunsch(
-    "CTGATCGACTGACTAGCTAGCTCCCCGCGCGCGTAGCTAGCATGCTAGTCGATCGCATC",
-    "CTGATCGACGCGCGTAGCTAGCACGATCGCATC"
+    "CAAATG",
+    "CATG"
 )
