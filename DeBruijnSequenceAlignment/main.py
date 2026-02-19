@@ -111,9 +111,9 @@ def de_bruijn_alignment(fragments, k):
     print("^^^ Reconstructed Sequence ^^^")
 
 
-de_bruijn_alignment(["CTATAAAGT", "AAATACTAT", "ATACTAT"], 4)
-# de_bruijn_alignment(["CGTGTAGCATC", "GCACGCTCAA", "AGCATCCCACATCGCACGCT", "CACGCTCAATCGA"], 6)
+de_bruijn_alignment(["CAAATACTATAAAGT"], 4)
 
+#de_bruijn_alignment(["CGTGTAGCATC", "GCACGCTCAA", "AGCATCCCACATCGCACGCT", "CACGCTCAATCGA"], 6)
 """
 
 For the above example
@@ -127,10 +127,3 @@ From Segments:
 
 """
 
-"""
-
-CAAATACTATAAAGT
-      CTATAAAGT
-CAAATACTAT
-   ATACTAT
-"""
