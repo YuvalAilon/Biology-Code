@@ -41,6 +41,6 @@ CGTAAAGCCGCTCACGTTC--TAA
 ```
 Score: 2
 
-![Needlman-Wunsch Reconstruction Matrix](./NeedlemanWunsch/NeedlmanWunschReconstruction.png "Needlman-Wunsch Reconstruction Matrix")
+![Needlman-Wunsch Reconstruction Matrix](NeedlmanWunschReconstruction.png "Needlman-Wunsch Reconstruction Matrix")
 
 Needleman, S B, and C D Wunsch. “A general method applicable to the search for similarities in the amino acid sequence of two proteins.” Journal of molecular biology vol. 48,3 (1970): 443-53. doi:10.1016/0022-2836(70)90057-4
