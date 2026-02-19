@@ -1,7 +1,8 @@
 # Returns a list of all kmers of a specified length of sequence
 def kmers_of(sequence, k):
     if len(sequence) < k:
-        raise Exception("k must be less than or equal to the length of the sequence")
+        raise Exception(
+            "k (" + str(k) + ") must be less than or equal to the length of the sequence (" + str(len(sequence)) + ")")
 
     kmers = []
     for i in range(len(sequence) - (k - 1)):
@@ -18,12 +19,42 @@ def l_r_k_minus_1_mers(kmer):
     ]
 
 
-def reconstruct_graph_from_node(graph, node):
-    return depth_first_search(graph, node, [])
+def reconstruct_graph(graph):
+    starting_node = ""
+    ending_node = ""
+    for node in graph:
+        in_minus_out_degree = graph[node]["in_degree"] - graph[node]["out_degree"]
+        if abs(in_minus_out_degree) > 1:
+            raise Exception("Node " + node + " has too many ingoing ("
+                            + str(graph[node]["in_degree"])
+                            + ") / outgoing nodes ("
+                            + str(graph[node]["out_degree"])
+                            + "). No Valid Eulerian Path "
+                            )
+        if in_minus_out_degree == -1:
+            if starting_node == "":
+                starting_node = node
+            else:
+                raise Exception(
+                    "More than one possible start node (" + node + ", " + starting_node + "). Stopping Reconstruction")
+        if in_minus_out_degree == 1:
+            if ending_node == "":
+                ending_node = node
+            else:
+                raise Exception(
+                    "More than one possible ending node (" + node + ", " + ending_node + "). Stopping Reconstruction")
+        if graph[node]["in_degree"] > 1 and \
+                graph[node]["in_degree"] != graph[node]["out_degree"]:
+            raise Exception(
+                "Bubble on node "
+                + node
+                + ", reassembly stopped. There may be no valid reconstruction, or k-value may be too small"
+            )
+    return depth_first_search(graph, starting_node, [])
+
 
 def depth_first_search(graph, node, path):
     while graph[node]["out_degree"] != 0:
-
         next_node = next(iter(graph[node]["edges"]))
         graph[node]["edges"].discard(next_node)
         graph[node]["out_degree"] -= 1
@@ -31,6 +62,7 @@ def depth_first_search(graph, node, path):
 
     path.insert(0, node)
     return path
+
 
 # Takes a list of k-1mer nodes and reconstructs them into the final DNA sequence
 def dna_sequence_from_nodes(nodes):
@@ -51,20 +83,15 @@ def construct_de_bruijn_graph(kmers):
             de_bruijn_graph[k_minus_1_mers[0]] = {"edges": {k_minus_1_mers[1]}, "in_degree": 0}
         else:
             de_bruijn_graph[k_minus_1_mers[0]]["edges"].add(k_minus_1_mers[1])
-    if kmers[-1][1] not in de_bruijn_graph:
-        de_bruijn_graph[l_r_k_minus_1_mers(kmers[-1])[1]] = {"edges": {}, "in_degree": 0}
+        if k_minus_1_mers[1] not in de_bruijn_graph:
+            de_bruijn_graph[k_minus_1_mers[1]] = {"edges": set(), "in_degree": 0}
+
     for key in de_bruijn_graph:
         for node in de_bruijn_graph[key]["edges"]:
             if node in de_bruijn_graph:
                 de_bruijn_graph[node]["in_degree"] += 1
         de_bruijn_graph[key]["out_degree"] = len(de_bruijn_graph[key]["edges"])
-        if de_bruijn_graph[node]["in_degree"] > 1 and \
-                de_bruijn_graph[key]["in_degree"] != de_bruijn_graph[key]["in_degree"]:
-            raise Exception(
-                "Bubble on node "
-                + key
-                + ", reassembly stopped. There may be no valid reconstruction, or k-value may be too small"
-            )
+
     return de_bruijn_graph
 
 
@@ -76,24 +103,16 @@ def de_bruijn_alignment(fragments, k):
         kmers += list
 
     de_bruijn_graph = construct_de_bruijn_graph(kmers)
-
-    starting_node = ""
-    for node in de_bruijn_graph:
-        if de_bruijn_graph[node]["in_degree"] - len(de_bruijn_graph[node]["edges"]) == -1:
-            if starting_node == "":
-                starting_node = node
-            else:
-                raise Exception("More than one node with out degree > in degree, no valid Eulerian Path")
-
     for key in de_bruijn_graph:
         print(key + " : " + str(de_bruijn_graph.get(key)))
-    reconstructed_sequence = dna_sequence_from_nodes(reconstruct_graph_from_node(de_bruijn_graph, starting_node))
+    reconstructed_sequence = dna_sequence_from_nodes(reconstruct_graph(de_bruijn_graph))
     print(reconstructed_sequence["reconstruction"])
     print(reconstructed_sequence["sequence"])
     print("^^^ Reconstructed Sequence ^^^")
 
 
-de_bruijn_alignment(["CGTGTAGCATC", "GCACGCTCAA", "AGCATCCCACATCGCACGCT", "CACGCTCAATCGA"], 6)
+de_bruijn_alignment(["CTATAAAGT", "AAATACTAT", "ATACTAT"], 4)
+# de_bruijn_alignment(["CGTGTAGCATC", "GCACGCTCAA", "AGCATCCCACATCGCACGCT", "CACGCTCAATCGA"], 6)
 
 """
 
@@ -106,4 +125,12 @@ From Segments:
     3.         AGCATCCCACATCGCACGCT
     4.                       CACGCTCAATCGA
 
+"""
+
+"""
+
+CAAATACTATAAAGT
+      CTATAAAGT
+CAAATACTAT
+   ATACTAT
 """
