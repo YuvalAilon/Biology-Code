@@ -19,11 +19,18 @@ def l_r_k_minus_1_mers(kmer):
 
 
 def reconstruct_graph_from_node(graph, node):
-    # Since currently bubbles are filtered out, this function is quite simple
-    # as I continue to add complexity, this function will become less trivial
-    if not node in graph:
-        return [node]
-    return [node] + reconstruct_graph_from_node(graph, next(iter(graph[node]["edges"])))
+    return depth_first_search(graph, node, [])
+
+def depth_first_search(graph, node, path):
+    while graph[node]["out_degree"] != 0:
+
+        next_node = next(iter(graph[node]["edges"]))
+        graph[node]["edges"].discard(next_node)
+        graph[node]["out_degree"] -= 1
+        depth_first_search(graph, next_node, path)
+
+    path.insert(0, node)
+    return path
 
 # Takes a list of k-1mer nodes and reconstructs them into the final DNA sequence
 def dna_sequence_from_nodes(nodes):
@@ -36,6 +43,7 @@ def dna_sequence_from_nodes(nodes):
 
 
 def construct_de_bruijn_graph(kmers):
+    print(kmers)
     de_bruijn_graph = {}
     for kmer in kmers:
         k_minus_1_mers = l_r_k_minus_1_mers(kmer)
@@ -43,13 +51,20 @@ def construct_de_bruijn_graph(kmers):
             de_bruijn_graph[k_minus_1_mers[0]] = {"edges": {k_minus_1_mers[1]}, "in_degree": 0}
         else:
             de_bruijn_graph[k_minus_1_mers[0]]["edges"].add(k_minus_1_mers[1])
+    if kmers[-1][1] not in de_bruijn_graph:
+        de_bruijn_graph[l_r_k_minus_1_mers(kmers[-1])[1]] = {"edges": {}, "in_degree": 0}
     for key in de_bruijn_graph:
         for node in de_bruijn_graph[key]["edges"]:
             if node in de_bruijn_graph:
                 de_bruijn_graph[node]["in_degree"] += 1
-                if de_bruijn_graph[node]["in_degree"] > 1:
-                    raise Exception(
-                        "Bubble on node " + node + ", reassembly stopped. There may be no valid reconstruction, or k-value may be too small")
+        de_bruijn_graph[key]["out_degree"] = len(de_bruijn_graph[key]["edges"])
+        if de_bruijn_graph[node]["in_degree"] > 1 and \
+                de_bruijn_graph[key]["in_degree"] != de_bruijn_graph[key]["in_degree"]:
+            raise Exception(
+                "Bubble on node "
+                + key
+                + ", reassembly stopped. There may be no valid reconstruction, or k-value may be too small"
+            )
     return de_bruijn_graph
 
 
