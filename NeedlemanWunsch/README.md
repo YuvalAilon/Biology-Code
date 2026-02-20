@@ -1,7 +1,7 @@
 # Needleman-Wunsch
 
 
-The Needleman-Wunsch algorithm, first described in [this paper](https://www.sciencedirect.com/science/article/pii/0022283670900574?via%3Dihub), is a dynamic-programming algorithm for global sequence alignment
+The Needleman-Wunsch algorithm, described in [this paper](https://www.sciencedirect.com/science/article/pii/0022283670900574?via%3Dihub), is a dynamic-programming algorithm for global sequence alignment
 ## Scoring Scheme
 The higher the score between two sequences, the better they are aligned. The score calculation has two main attributes the **Similarity Matrix** and the **Gap Penalty**
 ### Similarity Matrix
@@ -14,9 +14,9 @@ similarity_matrix={
     ...
 }
 ```
-For protein sequences PAM and BLOSUM scoring matrices are usually used, but for this proof of concept, matching nucleotides get a +1 score, and non-matching nucleotides get a -1 score
+For amino acid sequences PAM and BLOSUM scoring matrices are usually used, but for this proof of concept, matching nucleotides get a +1 score, and non-matching nucleotides get a -1 score
 ### Affine Gap Penalty
-It is more biologically likely that a few larger indels occur instead of many smaller ones, and this is reflected in the algorthim using an affine gap penalty. While starting a gap is -1 (the same as a mis-match), the penalty for opening a gap is much larger (-5 in this case).
+It is more biologically likely that fewer larger indels occur instead of many smaller ones, and this is reflected in the algorthim using an affine gap penalty. While starting a gap is -1 (the same as a mismatch), the penalty for opening a gap is much larger (-5 in this case).
 
 For example, when matching the following sequences:
 `CAAAATAAAATAAATGCC` and `CATATATGCC` although this alignment matches all nucleotides perfectly:
@@ -32,14 +32,24 @@ CAAAATAAAATAAATGCC
 C--------ATATATGCC
 ```
 ## Dynamic Programming Matrices
-## Sample Program Run
+To find the best alignment, three matrices are used. For every pair of two nucleotides from the two sequences, a score is calculated in the following matrices:
+- The **Match/Mismatch** matrix stores the best score assuming the previous move was a match or a closed gap
+- The **Horizontal Gap** matrix stores the best score assuming the previous move was an open horizontal gap, representing an indel
+- The **Vertical Gap** matrix stores the best score assuming the previous move was an open vertical gap, representing an indel
 
+After the generation of the matrices, reconstruction begins in the bottom right and proceeds upwards and to the left, choosing the best (highest scoring) move and appending it to the beginning of sequences. A state machine is required during reconstruction to keep track of whether or not a gap is currently open.
+
+## Sample Program Run
+To align `CGTAGCCGCACACGTACCTTAA` and `CGTAAAGCCGCTCACGTTCTAA`
 ```
 CGT--AGCCGCACACGTACCTTAA
 |||  ||||||*|||||*|  |||
 CGTAAAGCCGCTCACGTTC--TAA
 ```
 Score: 2
+
+---
+The best possible move(s) from each cell are shown as arrows, and a white square represents a cell present in the final alignment
 
 ![Needlman-Wunsch Reconstruction Matrix](NeedlmanWunschReconstruction.png "Needlman-Wunsch Reconstruction Matrix")
 
