@@ -39,4 +39,4 @@ Sometimes a graph contains multiple valid Eulerian Paths, for example:
 
 can refer to either `AAATAAAGCAAA` or `AAAGCAAATAA`. One way to avoid this is to use larger k values, since there are more possibilites for nodes, and less chance for an overlap.
 
-A limitation of my implementation is that it assumes 100% data. More complex sequence aligners may weigh the edges based on how often each k-mer appears and prune edges with sufficiently small weight. I hope to implement this in the future. 
+A limitation of my implementation is that it assumes 100% perfect data. More complex sequence aligners may weigh the edges based on how often each k-mer appears and prune edges with sufficiently small weight. I hope to implement this in the future. 
